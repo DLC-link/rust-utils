@@ -37,6 +37,7 @@ jobs:
         env:
           ECR_PUBLIC_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REGISTRY_ALIAS: dlc-link
           ECR_REPOSITORY: dlc-link-utils
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
