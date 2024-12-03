@@ -1,0 +1,52 @@
+# docker build and push to ECR
+
+name: Docker build and push
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [released]
+
+jobs:
+  build-utils:
+    name: Build utils
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Build and push
+        env:
+          ECR_PUBLIC_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: dlc-link-utils
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          docker build \
+          -t $ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/dlc-link-utils:$IMAGE_TAG \
+          -t $ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/dlc-link-utils:latest \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          -f ./Dockerfile .
+          docker push $ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/dlc-link-utils:$IMAGE_TAG
+          docker push $ECR_PUBLIC_REGISTRY/$REGISTRY_ALIAS/dlc-link-utils:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
